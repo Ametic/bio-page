@@ -11,7 +11,7 @@ const unbounded = Unbounded({
 })
 
 export const metadata: Metadata = {
-  title: "Delciak",
+  title: "My Bio Page",
   description: "A personal bio page with Discord integration",
 }
 
@@ -21,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body className={`${unbounded.variable} font-unbounded`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           {children}
