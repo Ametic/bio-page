@@ -348,6 +348,7 @@ export default function BioPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center py-10 px-4 relative overflow-hidden">
+      {/* Particles.js container */}
       {init && (
         <Particles
           id="tsparticles"
@@ -375,7 +376,7 @@ export default function BioPage() {
               },
               move: {
                 enable: true,
-                speed: 0.4,
+                speed: 0.8,
                 direction: "none",
                 random: true,
                 straight: false,
@@ -563,33 +564,35 @@ export default function BioPage() {
                     )}
 
                     <div className="flex-1">
-                      <div className="flex items-start">
-                        <div className="relative">
-                          {/* Increased size of album art */}
-                          <div className="w-20 h-20 relative rounded overflow-hidden bg-gray-800 flex items-center justify-center flex-shrink-0">
-                            {currentActivity?.assets?.large_image ? (
-                              <Image
-                                src={getAssetUrl(currentActivity) || "/placeholder.svg"}
-                                alt={currentActivity.assets.large_text || currentActivity.name}
-                                fill
-                                className="object-cover"
-                              />
-                            ) : (
-                              <MessageSquare className="w-6 h-6 text-gray-400" />
+                      <div className="flex">
+                        <div className="w-20 flex-shrink-0">
+                          <div className="relative">
+                            {/* Increased size of album art */}
+                            <div className="w-20 h-20 relative rounded overflow-hidden bg-gray-800 flex items-center justify-center">
+                              {currentActivity?.assets?.large_image ? (
+                                <Image
+                                  src={getAssetUrl(currentActivity) || "/placeholder.svg"}
+                                  alt={currentActivity.assets.large_text || currentActivity.name}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <MessageSquare className="w-6 h-6 text-gray-400" />
+                              )}
+                            </div>
+
+                            {/* Small image overlay - adjusted position for larger image */}
+                            {currentActivity?.assets?.small_image && (
+                              <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full overflow-hidden border-2 border-black bg-gray-800">
+                                <Image
+                                  src={getSmallAssetUrl(currentActivity) || "/placeholder.svg"}
+                                  alt={currentActivity.assets.small_text || ""}
+                                  fill
+                                  className="object-cover"
+                                />
+                              </div>
                             )}
                           </div>
-
-                          {/* Small image overlay - adjusted position for larger image */}
-                          {currentActivity?.assets?.small_image && (
-                            <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full overflow-hidden border-2 border-black bg-gray-800">
-                              <Image
-                                src={getSmallAssetUrl(currentActivity) || "/placeholder.svg"}
-                                alt={currentActivity.assets.small_text || ""}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                          )}
                         </div>
 
                         <div className="flex-1 ml-3">
@@ -619,29 +622,6 @@ export default function BioPage() {
                             </div>
                           )}
 
-                          {/* Progress Bar with Time Elapsed/Remaining */}
-                          {currentActivity?.timestamps && (
-                            <div className="mt-2">
-                              <div className="flex items-center justify-between mb-1 text-xs text-gray-400">
-                                {currentActivity.timestamps.start && (
-                                  <span className="flex items-center">
-                                    <Clock className="w-3 h-3 mr-1 text-purple-400" />
-                                    {formatTime(Date.now() - currentActivity.timestamps.start)}
-                                  </span>
-                                )}
-                                {currentActivity.timestamps.end && (
-                                  <span>{formatTime(currentActivity.timestamps.end - Date.now())}</span>
-                                )}
-                              </div>
-                              <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-gradient-to-r from-purple-600 to-purple-400 rounded-full shadow-glow-xs"
-                                  style={{ width: `${progressPercent}%` }}
-                                />
-                              </div>
-                            </div>
-                          )}
-
                           {/* Buttons - only show if we have them */}
                           {currentActivity?.buttons && currentActivity.buttons.length > 0 && (
                             <div className="flex flex-wrap gap-2 mt-2">
@@ -654,11 +634,34 @@ export default function BioPage() {
                           )}
                         </div>
                       </div>
+
+                      {/* Progress Bar with Time Elapsed/Remaining - moved outside to align with image */}
+                      {currentActivity?.timestamps && (
+                        <div className="mt-2">
+                          <div className="flex items-center justify-between mb-1 text-xs text-gray-400">
+                            {currentActivity.timestamps.start && (
+                              <span className="flex items-center">
+                                <Clock className="w-3 h-3 mr-1 text-purple-400" />
+                                {formatTime(Date.now() - currentActivity.timestamps.start)}
+                              </span>
+                            )}
+                            {currentActivity.timestamps.end && (
+                              <span>{formatTime(currentActivity.timestamps.end - Date.now())}</span>
+                            )}
+                          </div>
+                          <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-purple-600 to-purple-400 rounded-full shadow-glow-xs"
+                              style={{ width: `${progressPercent}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Navigation Controls - aligned with the larger image */}
                     {allActivities.length > 1 && (
-                      <div className="flex justify-between mt-3 ml-20 pl-3">
+                      <div className="flex justify-between mt-3">
                         <button
                           onClick={prevActivity}
                           className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center hover:bg-purple-900/50 transition-colors"

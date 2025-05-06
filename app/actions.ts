@@ -54,26 +54,31 @@ export async function getDiscordActivity(userId: string) {
 let viewCount = 0 // This will reset when the server restarts
 
 export async function incrementPageViews() {
-  // In a real app, you would store this in a database
-  viewCount++
+  try {
+    // Get the client IP to track unique views
+    const cookieStore = cookies()
+    const lastView = cookieStore.get("last_view")
+    const now = Date.now()
 
-  // Store the last view time in a cookie to prevent multiple counts from the same user in a short period
-  const cookieStore = cookies()
-  const lastView = cookieStore.get("last_view")
-  const now = Date.now()
+    // If the user viewed the page in the last 1 minute, don't increment the counter
+    if (lastView && now - Number.parseInt(lastView.value) < 60 * 1000) {
+      return viewCount
+    }
 
-  // If the user viewed the page in the last 30 minutes, don't increment the counter
-  if (lastView && now - Number.parseInt(lastView.value) < 30 * 60 * 1000) {
+    // Increment the view count
+    viewCount++
+
+    // Set the last view time with 1 minute cooldown
+    cookieStore.set("last_view", now.toString(), {
+      maxAge: 60 * 60 * 24 * 30, // 30 days cookie expiration
+      path: "/",
+    })
+
     return viewCount
+  } catch (error) {
+    console.error("Error incrementing page views:", error)
+    return viewCount // Return current count even if there's an error
   }
-
-  // Set the last view time
-  cookieStore.set("last_view", now.toString(), {
-    maxAge: 60 * 60 * 24 * 30, // 30 days
-    path: "/",
-  })
-
-  return viewCount
 }
 
 export async function getPageViews() {

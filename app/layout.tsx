@@ -13,6 +13,7 @@ const unbounded = Unbounded({
 export const metadata: Metadata = {
   title: "My Bio Page",
   description: "A personal bio page with Discord integration",
+    generator: 'v0.dev'
 }
 
 export default function RootLayout({
