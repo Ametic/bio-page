@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -88,6 +88,75 @@ export default function BioPage() {
   const cardRef = useRef<HTMLDivElement>(null)
 
   const DISCORD_USER_ID = "256470398961582080"
+
+  // Calculate and update progress percentage
+  const updateProgress = useCallback(() => {
+    if (!discordPresence?.activities && !discordPresence?.spotify) {
+      setProgressPercent(0)
+      return
+    }
+
+    // Get all displayable activities (excluding custom status which is shown separately)
+    const displayableActivities = discordPresence?.activities?.filter((a) => a.type !== 4) || []
+
+    // Add Spotify as an activity if it exists and isn't already in activities
+    const allActivities =
+      discordPresence?.spotify && !displayableActivities.some((a) => a.name === "Spotify")
+        ? [
+            ...displayableActivities,
+            {
+              name: "Spotify",
+              type: 2,
+              details: discordPresence.spotify.song,
+              state: `by ${discordPresence.spotify.artist}`,
+              assets: {
+                large_image: discordPresence.spotify.album_art_url,
+                large_text: discordPresence.spotify.album,
+              },
+              timestamps: discordPresence.spotify.timestamps,
+            },
+          ]
+        : displayableActivities
+
+    if (!allActivities || allActivities.length === 0 || !allActivities[currentActivityIndex]) {
+      setProgressPercent(0)
+      return
+    }
+
+    const activity = allActivities[currentActivityIndex]
+    const now = Date.now()
+
+    // If activity has both start and end time (like Spotify)
+    if (activity.timestamps?.start && activity.timestamps?.end) {
+      const start = activity.timestamps.start
+      const end = activity.timestamps.end
+      const total = end - start
+      const elapsed = now - start
+
+      // Calculate percentage (clamped between 0-100)
+      const percent = Math.max(0, Math.min(100, (elapsed / total) * 100))
+      setProgressPercent(percent)
+    }
+    // If activity only has start time (like games, etc.)
+    else if (activity.timestamps?.start) {
+      const start = activity.timestamps.start
+      const elapsed = now - start
+
+      // For activities with only start time, we'll use a 2-hour maximum
+      // This is arbitrary but provides a reasonable scale
+      const maxDuration = 2 * 60 * 60 * 1000 // 2 hours in milliseconds
+
+      // Calculate percentage (capped at 100%)
+      const percent = Math.min(100, (elapsed / maxDuration) * 100)
+      setProgressPercent(percent)
+    } else {
+      // For activities without timestamps, use a pulsing effect
+      // This creates a progress bar that moves back and forth
+      const time = now / 1000
+      const pulse = (Math.sin(time) + 1) / 2 // Oscillates between 0 and 1
+      setProgressPercent(pulse * 30) // Scale to max 30% for subtle effect
+    }
+  }, [discordPresence, currentActivityIndex])
 
   useEffect(() => {
     initParticlesEngine(async (engine) => {
@@ -178,52 +247,10 @@ export default function BioPage() {
         clearInterval(progressIntervalRef.current)
       }
     }
-  }, [currentActivityIndex, discordPresence])
-
-  // Calculate and update progress percentage
-  const updateProgress = () => {
-    if (!allActivities || allActivities.length === 0 || !allActivities[currentActivityIndex]) {
-      setProgressPercent(0)
-      return
-    }
-
-    const activity = allActivities[currentActivityIndex]
-    const now = Date.now()
-
-    // If activity has both start and end time (like Spotify)
-    if (activity.timestamps?.start && activity.timestamps?.end) {
-      const start = activity.timestamps.start
-      const end = activity.timestamps.end
-      const total = end - start
-      const elapsed = now - start
-
-      // Calculate percentage (clamped between 0-100)
-      const percent = Math.max(0, Math.min(100, (elapsed / total) * 100))
-      setProgressPercent(percent)
-    }
-    // If activity only has start time (like games, etc.)
-    else if (activity.timestamps?.start) {
-      const start = activity.timestamps.start
-      const elapsed = now - start
-
-      // For activities with only start time, we'll use a 2-hour maximum
-      // This is arbitrary but provides a reasonable scale
-      const maxDuration = 2 * 60 * 60 * 1000 // 2 hours in milliseconds
-
-      // Calculate percentage (capped at 100%)
-      const percent = Math.min(100, (elapsed / maxDuration) * 100)
-      setProgressPercent(percent)
-    } else {
-      // For activities without timestamps, use a pulsing effect
-      // This creates a progress bar that moves back and forth
-      const time = now / 1000
-      const pulse = (Math.sin(time) + 1) / 2 // Oscillates between 0 and 1
-      setProgressPercent(pulse * 30) // Scale to max 30% for subtle effect
-    }
-  }
+  }, [updateProgress])
 
   // Helper function to get asset URL
-  const getAssetUrl = (activity) => {
+  const getAssetUrl = (activity: any) => {
     if (!activity.assets?.large_image) return null
 
     if (activity.assets.large_image.startsWith("spotify:")) {
@@ -238,7 +265,7 @@ export default function BioPage() {
   }
 
   // Helper function to get small asset URL
-  const getSmallAssetUrl = (activity) => {
+  const getSmallAssetUrl = (activity: any) => {
     if (!activity.assets?.small_image) return null
 
     if (activity.assets.small_image.startsWith("spotify:")) {
@@ -413,7 +440,7 @@ export default function BioPage() {
         className="max-w-md w-full backdrop-blur-xl bg-black/40 rounded-2xl shadow-xl border border-purple-500/20 p-8 relative z-10"
       >
         {/* View Counter */}
-        <div className="absolute top-3 left-3 flex items-center text-xs text-gray-300 bg-black/60 px-2 py-1 rounded-full shadow-glow-sm">
+        <div className="absolute top-3 left-3 mt-1 flex items-center text-xs text-gray-300 bg-black/60 px-2 py-1 rounded-full shadow-glow-sm">
           <Eye className="w-3 h-3 mr-1 text-purple-400" />
           <span>{viewCount} views</span>
         </div>
@@ -485,7 +512,7 @@ export default function BioPage() {
             ) : error ? (
               <div className="text-gray-300 text-sm py-2">{error}</div>
             ) : (
-              <>
+              <div>
                 {/* Discord Profile */}
                 <div className="flex items-center mb-4">
                   <div className="relative w-14 h-14 rounded-full overflow-hidden border-2 border-white/20 mr-3">
@@ -529,7 +556,6 @@ export default function BioPage() {
                               ? "Do Not Disturb"
                               : "Offline"}
                       </p>
-                      {/* Removed Desktop text */}
                       {discordPresence?.active_on_discord_mobile && <p className="text-xs text-gray-400">Mobile</p>}
                       {discordPresence?.active_on_discord_web && <p className="text-xs text-gray-400">Web</p>}
                     </div>
@@ -609,19 +635,6 @@ export default function BioPage() {
 
                           {currentActivity?.state && <p className="text-xs text-gray-400">{currentActivity.state}</p>}
 
-                          {/* Asset text - only show if we have space */}
-                          {(currentActivity?.assets?.large_text || currentActivity?.assets?.small_text) && (
-                            <div className="mt-1 space-y-0.5">
-                              {currentActivity?.assets?.large_text && (
-                                <p className="text-xs text-gray-400">{currentActivity.assets.large_text}</p>
-                              )}
-
-                              {currentActivity?.assets?.small_text && (
-                                <p className="text-xs text-gray-400">{currentActivity.assets.small_text}</p>
-                              )}
-                            </div>
-                          )}
-
                           {/* Buttons - only show if we have them */}
                           {currentActivity?.buttons && currentActivity.buttons.length > 0 && (
                             <div className="flex flex-wrap gap-2 mt-2">
@@ -632,70 +645,70 @@ export default function BioPage() {
                               ))}
                             </div>
                           )}
+
+                          {/* Progress Bar with Time Elapsed/Remaining - only show for Spotify */}
+                          {currentActivity?.timestamps && currentActivity?.name === "Spotify" && (
+                            <div className="mt-2">
+                              <div className="flex items-center justify-between mb-1 text-xs text-gray-400">
+                                {currentActivity.timestamps.start && (
+                                  <span className="flex items-center">
+                                    <Clock className="w-3 h-3 mr-1 text-purple-400" />
+                                    {formatTime(Date.now() - currentActivity.timestamps.start)}
+                                  </span>
+                                )}
+                                {currentActivity.timestamps.end && (
+                                  <span>{formatTime(currentActivity.timestamps.end - Date.now())}</span>
+                                )}
+                              </div>
+                              <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-purple-600 to-purple-400 rounded-full shadow-glow-xs"
+                                  style={{ width: `${progressPercent}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      {/* Progress Bar with Time Elapsed/Remaining - moved outside to align with image */}
-                      {currentActivity?.timestamps && (
-                        <div className="mt-2">
-                          <div className="flex items-center justify-between mb-1 text-xs text-gray-400">
-                            {currentActivity.timestamps.start && (
-                              <span className="flex items-center">
-                                <Clock className="w-3 h-3 mr-1 text-purple-400" />
-                                {formatTime(Date.now() - currentActivity.timestamps.start)}
-                              </span>
-                            )}
-                            {currentActivity.timestamps.end && (
-                              <span>{formatTime(currentActivity.timestamps.end - Date.now())}</span>
-                            )}
+                      {/* Navigation Controls - aligned with the larger image */}
+                      {allActivities.length > 1 && (
+                        <div className="flex justify-between mt-3">
+                          <button
+                            onClick={prevActivity}
+                            className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center hover:bg-purple-900/50 transition-colors"
+                            aria-label="Previous activity"
+                          >
+                            <ChevronLeft className="w-4 h-4 text-white" />
+                          </button>
+
+                          {/* Activity Indicators */}
+                          <div className="flex items-center gap-1">
+                            {allActivities.map((_, idx) => (
+                              <div
+                                key={idx}
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  idx === currentActivityIndex ? "bg-purple-500" : "bg-gray-600"
+                                }`}
+                              />
+                            ))}
                           </div>
-                          <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-gradient-to-r from-purple-600 to-purple-400 rounded-full shadow-glow-xs"
-                              style={{ width: `${progressPercent}%` }}
-                            />
-                          </div>
+
+                          <button
+                            onClick={nextActivity}
+                            className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center hover:bg-purple-900/50 transition-colors"
+                            aria-label="Next activity"
+                          >
+                            <ChevronRight className="w-4 h-4 text-white" />
+                          </button>
                         </div>
                       )}
                     </div>
-
-                    {/* Navigation Controls - aligned with the larger image */}
-                    {allActivities.length > 1 && (
-                      <div className="flex justify-between mt-3">
-                        <button
-                          onClick={prevActivity}
-                          className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center hover:bg-purple-900/50 transition-colors"
-                          aria-label="Previous activity"
-                        >
-                          <ChevronLeft className="w-4 h-4 text-white" />
-                        </button>
-
-                        {/* Activity Indicators */}
-                        <div className="flex items-center gap-1">
-                          {allActivities.map((_, idx) => (
-                            <div
-                              key={idx}
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                idx === currentActivityIndex ? "bg-purple-500" : "bg-gray-600"
-                              }`}
-                            />
-                          ))}
-                        </div>
-
-                        <button
-                          onClick={nextActivity}
-                          className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center hover:bg-purple-900/50 transition-colors"
-                          aria-label="Next activity"
-                        >
-                          <ChevronRight className="w-4 h-4 text-white" />
-                        </button>
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <div className="text-gray-300 text-sm py-2">Not currently active</div>
                 )}
-              </>
+              </div>
             )}
           </div>
         </div>
